@@ -133,3 +133,5 @@ dmypy.json
 
 # local debugging
 local/
+
+query.h5
