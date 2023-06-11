@@ -134,4 +134,8 @@ dmypy.json
 # local debugging
 local/
 
+# VSCode
+.vscode
+
+# query.h5 output from some runs
 query.h5
