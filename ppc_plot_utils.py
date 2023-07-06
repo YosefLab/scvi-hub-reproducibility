@@ -138,10 +138,10 @@ class PPCPlot:
             # https://engineeringfordatascience.com/posts/matplotlib_subplots/
             ncols = 4
             nrows = ceil(len(group_de_metrics.keys()) / ncols)
-            figsize = figure_size if figure_size is not None else (20, 5 * nrows)
+            figsize = figure_size if figure_size is not None else (10, 2 * nrows)
             fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize, layout="constrained")
-            title = f"LFC 1-vs-all across groups, dots are genes" # x=raw de, y=approx de
-            fig.suptitle(title, fontsize=18)
+            # title = f"LFC 1-vs-all across groups, dots are genes" # x=raw de, y=approx de
+            # fig.suptitle(title, fontsize=18)
             axs_lst = axs.ravel()
             # https://stackoverflow.com/a/66799199
             for ax in axs_lst:
@@ -153,16 +153,19 @@ class PPCPlot:
                 i += 1
                 raw = group_de_metrics[group]["raw"]
                 approx = group_de_metrics[group]["approx"]
-                # ax.scatter(raw.to_list(), approx.to_list())
-                nbin = 200
-                h, _, _ = np.histogram2d(approx, raw, bins=nbin)
-                a = h.flatten()
-                cmin = np.min(a[a > 0])  # the smallest value > 0
-                h = ax.hist2d(approx, raw, bins=nbin, cmin=cmin, rasterized=True, cmap=plt.cm.viridis)
-                _add_identity(ax, no_legend=True, color="r", ls="--", alpha=0.5)
+                ax.scatter(raw.to_list(), approx.to_list(), s=0.5, alpha=0.5)
+                # nbin = 200
+                # h, _, _ = np.histogram2d(approx, raw, bins=nbin)
+                # a = h.flatten()
+                # cmin = np.min(a[a > 0])  # the smallest value > 0
+                # h = ax.hist2d(approx, raw, bins=nbin, cmin=cmin, rasterized=True, cmap=plt.cm.viridis)
+                _add_identity(ax, color="r", ls="--", alpha=0.5)
                 # add title
+                # ax.set_title(
+                #     f"{group} \n pearson={pearsonr(raw, approx)[0]:.2f} - spearman={spearmanr(raw, approx)[0]:.2f} - mae={np.mean(np.abs(raw - approx)):.2f}"
+                # )
                 ax.set_title(
-                    f"{group} \n pearson={pearsonr(raw, approx)[0]:.2f} - spearman={spearmanr(raw, approx)[0]:.2f} - mae={np.mean(np.abs(raw - approx)):.2f}"
+                    f"{group} \n pearson={pearsonr(raw, approx)[0]:.2f}"
                 )
                 ax.set_axis_on()
         elif plot_kind == "summary_violin":
