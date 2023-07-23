@@ -14,8 +14,6 @@ METRIC_CV_CELL = "cv_cell"
 METRIC_CV_GENE = "cv_gene"
 METRIC_DIFF_EXP = "diff_exp"
 
-logger = logging.getLogger(__name__)
-
 # from https://stackoverflow.com/a/28216751
 def _add_identity(axes, *line_args, no_legend: bool = False, **line_kwargs):
     (identity,) = axes.plot([], [], *line_args, **line_kwargs, label="identity")
@@ -72,7 +70,7 @@ class PPCPlot:
         title = f"model={model_name} | metric={metric} | n_cells={self._ppc.raw_counts.shape[0]}"
 
         # log mae, pearson corr, spearman corr, R^2
-        logger.info(
+        print(
             f"{title}:\n"
             f"Mean Absolute Error={mae(model_metric, raw_metric):.2f},\n"
             f"Pearson correlation={pearsonr(model_metric, raw_metric)[0]:.2f}\n"
@@ -138,7 +136,7 @@ class PPCPlot:
             # https://engineeringfordatascience.com/posts/matplotlib_subplots/
             ncols = 4
             nrows = ceil(len(group_de_metrics.keys()) / ncols)
-            figsize = figure_size if figure_size is not None else (10, 2 * nrows)
+            figsize = figure_size if figure_size is not None else (15, 2 * nrows)
             fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize, layout="constrained")
             # title = f"LFC 1-vs-all across groups, dots are genes" # x=raw de, y=approx de
             # fig.suptitle(title, fontsize=18)
@@ -153,12 +151,12 @@ class PPCPlot:
                 i += 1
                 raw = group_de_metrics[group]["raw"]
                 approx = group_de_metrics[group]["approx"]
-                ax.scatter(raw.to_list(), approx.to_list(), s=0.5, alpha=0.5)
-                # nbin = 200
-                # h, _, _ = np.histogram2d(approx, raw, bins=nbin)
-                # a = h.flatten()
-                # cmin = np.min(a[a > 0])  # the smallest value > 0
-                # h = ax.hist2d(approx, raw, bins=nbin, cmin=cmin, rasterized=True, cmap=plt.cm.viridis)
+                # ax.scatter(raw.to_list(), approx.to_list(), s=0.5, alpha=0.5)
+                nbin = 200
+                h, _, _ = np.histogram2d(approx, raw, bins=nbin)
+                a = h.flatten()
+                cmin = np.min(a[a > 0])  # the smallest value > 0
+                h = ax.hist2d(approx, raw, bins=nbin, cmin=cmin, rasterized=True, cmap=plt.cm.viridis)
                 _add_identity(ax, color="r", ls="--", alpha=0.5)
                 # add title
                 # ax.set_title(
