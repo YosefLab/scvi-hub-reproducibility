@@ -49,7 +49,7 @@ class PPCPlot:
     ):
         self._ppc = ppc
 
-    def plot_cv(self, model_name: str, cell_wise: bool = True, plt_type: Literal["scatter", "hist2d"] = "hist2d"):
+    def plot_cv(self, model_name: str, cell_wise: bool = True, plt_type: Literal["scatter", "hist2d"] = "hist2d", model = None, indices=None):
         """
         Plot coefficient of variation metrics results.
 
@@ -63,42 +63,111 @@ class PPCPlot:
             Whether to plot the cell-wise or gene-wise metric
         plt_type
             The type of plot to generate.
+        model
+            Model used for generating metric to split validation and training data
+        indices
+            Indices of the data to plot, if None, all data will be plotted
         """
         metric = METRIC_CV_CELL if cell_wise is True else METRIC_CV_GENE
         model_metric = self._ppc.metrics[metric][model_name].values
         raw_metric = self._ppc.metrics[metric]["Raw"].values
+        
         title = f"model={model_name} | metric={metric} | n_cells={self._ppc.raw_counts.shape[0]}"
 
         # log mae, pearson corr, spearman corr, R^2
-        print(
-            f"{title}:\n"
-            f"Mean Absolute Error={mae(model_metric, raw_metric):.2f},\n"
-            f"Pearson correlation={pearsonr(model_metric, raw_metric)[0]:.2f}\n"
-            f"Spearman correlation={spearmanr(model_metric, raw_metric)[0]:.2f}\n"
-            f"r^2={r2_score(raw_metric, model_metric):.2f}\n"
-        )
-
-        # plot visual correlation (scatter plot or 2D histogram)
-        if plt_type == "scatter":
-            plt.scatter(model_metric, raw_metric)
-        elif plt_type == "hist2d":
-            h, _, _, _ = plt.hist2d(model_metric, raw_metric, bins=300)
-            plt.close()  # don't show it yet
-            a = h.flatten()
-            cmin = np.min(a[a > 0])  # the smallest value > 0
-            h = plt.hist2d(model_metric, raw_metric, bins=300, cmin=cmin, rasterized=True)
+        if (model is not None) and cell_wise and (len(np.intersect1d(indices, model.train_indices)) > 3) and (len(np.intersect1d(indices, model.validation_indices)) > 3):
+            if indices is None:
+                indices = [model.train_indices, model.validation_indices]
+            else:
+                indices = [np.intersect1d(indices, model.train_indices), np.intersect1d(indices, model.validation_indices)]
+            color = ['blue', 'red']
+            label = ['train', 'valid']
+            mae_values = [
+                mae(model_metric[indices[0]], raw_metric[indices[0]]),
+                mae(model_metric[indices[1]], raw_metric[indices[1]])
+            ]
+            pearsonr_values = [
+                pearsonr(model_metric[indices[0]], raw_metric[indices[0]])[0],
+                pearsonr(model_metric[indices[1]], raw_metric[indices[1]])[0]
+            ]
+            spearmanr_values = [
+                spearmanr(model_metric[indices[0]], raw_metric[indices[0]])[0],
+                spearmanr(model_metric[indices[1]], raw_metric[indices[1]])[0]
+            ]
+            r2_score_values = [
+                r2_score(model_metric[indices[0]], raw_metric[indices[0]]),
+                r2_score(model_metric[indices[1]], raw_metric[indices[1]])
+            ]
+            print(
+                f"{title}:\n"
+                f"Mean Absolute Error={mae_values[0]:.2f} Validation {mae_values[1]:.2f},\n"
+                f"Pearson correlation={pearsonr_values[0]:.2f} Validation {pearsonr_values[1]:.2f},\n"
+                f"Spearman correlation={spearmanr_values[0]:.2f} Validation {spearmanr_values[1]:.2f},\n"
+                f"R^2={r2_score_values[0]:.2f} Validation {r2_score_values[1]:.2f},\n"
+            )
         else:
-            raise ValueError(f"Invalid plt_type={plt_type}")
-        ax = plt.gca()
-        _add_identity(ax, color="r", ls="--", alpha=0.5)
-        # add line of best fit
-        a, b = np.polyfit(model_metric, raw_metric, 1)
-        plt.plot(model_metric, a * model_metric + b, color="blue", ls="--", alpha=0.8, label="line of best fit")
-        ax.legend()
-        # add labels and titles
-        plt.xlabel("model")
-        plt.ylabel("raw")
-        plt.title(title)
+            if indices is None:
+                indices = [np.arange(len(model_metric))]
+            color = ['blue']
+            label = ['all']
+            mae_values = [
+                mae(model_metric, raw_metric)
+            ]
+            pearsonr_values = [
+                pearsonr(model_metric, raw_metric)[0]
+            ]
+            spearmanr_values = [
+                spearmanr(model_metric, raw_metric)[0]
+            ]
+            r2_score_values = [
+                r2_score(model_metric, raw_metric)
+            ]
+            print(
+                f"{title}:\n"
+                f"Mean Absolute Error={mae_values[0]:.2f},\n"
+                f"Pearson correlation={pearsonr_values[0]:.2f},\n"
+                f"Spearman correlation={spearmanr_values[0]:.2f},\n"
+                f"R^2={r2_score_values[0]:.2f},\n"
+            )
+        # Initialize figure and axis
+        fig, ax = plt.subplots(figsize=(7.5, 6))
+
+        # Loop over your indices and plot on the same axes
+        for key, ind in enumerate(indices):
+            # Plot visual correlation (scatter plot or 2D histogram)
+            if plt_type == "scatter":
+                ax.scatter(model_metric[ind], raw_metric[ind], label=label[key], color=color[key], alpha=0.6)
+                # Add line of best fit
+            elif plt_type == "hist2d":
+                # Collect all data for hist2d
+                if key == 0:
+                    all_model_metric = model_metric[ind]
+                    all_raw_metric = raw_metric[ind]
+                else:
+                    all_model_metric = np.concatenate((all_model_metric, model_metric[ind]))
+                    all_raw_metric = np.concatenate((all_raw_metric, raw_metric[ind]))
+            else:
+                raise ValueError(f"Invalid plt_type={plt_type}")
+            a, b = np.polyfit(model_metric[ind], raw_metric[ind], 1)
+            x_vals = np.array([0, 1000.])
+            ax.plot(x_vals, a * x_vals + b, color=color[key], ls="--", alpha=0.8,
+                    label=f"{label[key]} trend, r²={pearsonr_values[key]**2:.2f}")
+
+        if plt_type == "hist2d":
+            h = ax.hist2d(all_model_metric, all_raw_metric, bins=300, cmap='viridis', cmin=1, rasterized=True)
+            plt.colorbar(h[3], ax=ax)
+        _add_identity(ax, color="k", ls="-", alpha=0.5)
+
+        # Add labels and legend
+        if cell_wise:
+            ax.set_xlabel('Cell-Wise Coefficient of Variation (Model)')
+            ax.set_ylabel('Cell-Wise Coefficient of Variation (Raw)')
+        else:
+            ax.set_xlabel('Gene-Wise Coefficient of Variation (Model)')
+            ax.set_ylabel('Gene-Wise Coefficient of Variation (Raw)')
+        if plt_type == "scatter":
+            ax.legend()
+
 
     def plot_diff_exp(
         self,
@@ -163,7 +232,7 @@ class PPCPlot:
                 #     f"{group} \n pearson={pearsonr(raw, approx)[0]:.2f} - spearman={spearmanr(raw, approx)[0]:.2f} - mae={np.mean(np.abs(raw - approx)):.2f}"
                 # )
                 ax.set_title(
-                    f"{group} \n pearson={pearsonr(raw, approx)[0]:.2f}"
+                    f"{group} \n pearson={pearsonr(raw, approx)[0]:.2f}  \n spearman={spearmanr(raw, approx)[0]:.2f}"
                 )
                 ax.set_axis_on()
         elif plot_kind == "summary_violin":
