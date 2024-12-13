@@ -4,7 +4,7 @@ This repository contains notebooks and scripts to reproduce analyses benchmarkin
 (see [manuscript](https://www.biorxiv.org/content/10.1101/2024.03.01.582887v1)).
 
 We provide HuggingFace scvi-hub models at [HuggingFace](https://huggingface.co/scvi-tools) and recommend reviewing the [scvi-tools](https://scvi-tools.org/) documentation to get started. Especially [CELLxGENE hub](https://docs.scvi-tools.org/en/stable/tutorials/notebooks/hub/cellxgene_census_model.html)
-highlights how to use the CELLxGENE census reference model. We provide the version of scvi-tools to reproduce the findings in this repo. Scvi-tools is continuously developed and future versions might use a different API.
+highlights how to use the CELLxGENE census reference model.
 
 ## Repository structure
 We provide here all notebooks to reproduce the results. Data and reference models are pulled from public repositories on 03/10/24. The census soma object
